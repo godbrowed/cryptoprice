@@ -1,90 +1,37 @@
-import os
-import requests
+# main.py
+from telegram.ext import Application, MessageHandler, filters
+from bot.config import TOKEN
+from bot.eval import handle_eval_request
+from bot.cryptoeval import cryptoeval
+from bot.multiplycrypto import multiply_crypto
+from bot.time import handle_time_request
 import re
-from PIL import Image, ImageDraw, ImageFont
-from io import BytesIO
-from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from telegram.ext import CommandHandler, MessageHandler, filters, Application
 
-def get_price(crypto):
-    api_key = ""
-    url = f"https://min-api.cryptocompare.com/data/price?fsym={crypto}&tsyms=USD"
-    headers = {"Authorization": f"Apikey {api_key}"}
-    response = requests.get(url, headers=headers)
-    data = response.json()
-    return data["USD"]
+def is_time_request(text: str):
+    return bool(re.fullmatch(r"\d{1,2}(?::\d{2})?\s*(UTC|GMT)", text, re.IGNORECASE))
 
+def is_crypto_calculation(text: str):
+    return bool(re.search(r"[+\-*/]", text)) and bool(re.search(r"\d+\s*[a-zA-Z]+", text)) and not is_time_request(text)
 
-def add_price_to_image(image_path, price):
-    img = Image.open(image_path)
-    draw = ImageDraw.Draw(img)
-    
-    font = ImageFont.truetype("DejaVuSans-Bold.ttf", 60)
-    
-    width, height = img.size
-    text = f"${price:.2f}"
-    
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1] 
-    offset_x = 90  # Зміщення вправо
-    offset_y = 50  # Зміщення вгору
+def is_crypto_multiplication(text: str):
+    return bool(re.fullmatch(r"(\d+(\.\d+)?\s+[a-zA-Z]+\s*)+", text)) and not re.search(r"[+\-*/]", text) and not is_time_request(text)
 
-    position = ((width - text_width) // 2 + offset_x, height - 140 - offset_y)
-    # Draw text on the image
-    draw.text(position, text, font=font, fill=(138, 43, 255))
-    
-    return img
+def is_single_crypto_price_request(text: str):
+    return bool(re.fullmatch(r"\d+(\.\d+)?\s+[a-zA-Z]+", text)) and not is_time_request(text)
 
-def extract_amount_and_crypto(text):
-    match = re.match(r"^(\d+(\.\d+)?)\s*(\w+)$", text)
-    amount = float(match.group(1))
-    crypto = match.group(3)
-    return amount, crypto
-
-async def handle_message(update: Update, context):
-    text = update.message.text
-    chat_id = update.message.chat_id
-
-    # Перевіряємо, чи є в тексті число та валюта (наприклад, "1 BTC", "10 ETH")
-    match = re.match(r"^(\d+(\.\d+)?)\s+([A-Za-z]+)$", text)
-    if not match:
-        return
-    
-    try:
-        amount, crypto = extract_amount_and_crypto(text)
-        
-        price = get_price(crypto)
-        
-        total_price = price * amount
-        
-        image_path = "images/image.jpg"
-        img = add_price_to_image(image_path, total_price)
-        
-        img_path = "images/price_image.png"
-        img.save(img_path, "PNG")
-        
-        crypto_link = f"https://www.tradingview.com/symbols/{crypto.upper()}USD/?exchange=CRYPTO"
-        
-        with open(img_path, "rb") as photo:
-            caption = f"💰 Price: ${total_price:.2f}"
-            button = InlineKeyboardButton("View Chart", url=crypto_link)
-            reply_markup = InlineKeyboardMarkup([[button]])
-            await context.bot.send_photo(chat_id, photo, caption=caption, reply_markup=reply_markup)
-    except Exception as e:
-        await update.message.reply_text(f"Error: {e}")
-
-
-# Main function to start the bot
 def main():
-    # Initialize the bot
-    bot = Bot(token="")
-    application = Application.builder().token("").build()
-
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
+    application = Application.builder().token(TOKEN).build()
+    application.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND,
+        lambda update, context: (
+            handle_time_request(update, context) if is_time_request(update.message.text.strip())
+            else multiply_crypto(update, context) if is_crypto_multiplication(update.message.text.strip())
+            else cryptoeval(update, context) if is_crypto_calculation(update.message.text.strip())
+            else handle_eval_request(update, context) if is_single_crypto_price_request(update.message.text.strip())
+            else handle_eval_request(update, context)
+        )
+    ))
     application.run_polling()
-
 
 if __name__ == "__main__":
     main()
