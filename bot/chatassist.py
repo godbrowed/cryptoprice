@@ -7,11 +7,9 @@ from PIL import Image
 from google.genai import types
 from io import BytesIO
 
-# Инициализация Gemini API
-GEMINI_API_KEY = "AIzaSyBjub_rAHdHg1B2IZ1xzb6uL8OUKA6F4iQ"
+GEMINI_API_KEY = ""
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-# Создаем БД, если ее нет
 conn = sqlite3.connect("bot_memory.db", check_same_thread=False)
 cursor = conn.cursor()
 cursor.execute('''
@@ -30,25 +28,21 @@ def load_instructions():
 
 system_instruction = load_instructions()
 
-# Функция записи в БД
 def save_to_db(user_id, request, response):
     cursor.execute("INSERT INTO history (user_id, request, response) VALUES (?, ?, ?)", 
                    (user_id, request, response))
     conn.commit()
 
-# Функция получения последних N сообщений
 def get_last_dialogue(user_id, limit=5):
     cursor.execute("SELECT request, response FROM history WHERE user_id = ? ORDER BY id DESC LIMIT ?", 
                    (user_id, limit))
     return cursor.fetchall()
 
 def generate_text(prompt, user_id):
-    # Получаем последние 5 сообщений пользователя
     last_dialogue = get_last_dialogue(user_id)
 
-    # Формируем контекст для модели
-    context = "\n".join([f"Пользователь: {req}\nБот: {resp}" for req, resp in last_dialogue])
-    full_prompt = f"{context}\nПользователь: {prompt}\nБот:"
+    context = "\n".join([f"User: {req}\Bot: {resp}" for req, resp in last_dialogue])
+    full_prompt = f"{context}\User: {prompt}\nBot:"
 
     response = client.models.generate_content(
         model="gemini-2.0-flash",
