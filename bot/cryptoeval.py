@@ -37,7 +37,7 @@ async def cryptoeval(update: Update, context):
     text = update.message.text.strip()
     chat_id = update.message.chat_id
 
-    # Словник для маппінгу абревіатур на повні назви криптовалют
+    # List of supported cryptos(full name)
     crypto_names = {
         "btc": "Bitcoin",
         "eth": "Ethereum",
@@ -50,6 +50,8 @@ async def cryptoeval(update: Update, context):
     try:
         parsed_expr, prices = parse_crypto_expression(text)
         result = safe_eval(parsed_expr)
+        if result is None:
+            return
 
         if isinstance(result, (int, float)):
             result_text = f"${result:.2f}"
@@ -60,13 +62,14 @@ async def cryptoeval(update: Update, context):
 
         buttons = []
         for crypto in prices.keys():
-            # Отримуємо повну назву крипти з crypto_names
+            # Full crypto name(add the list of cryptos you want to support)
             crypto_name = crypto_names.get(crypto.lower(), crypto.upper())
             crypto_link = f"https://www.tradingview.com/symbols/{crypto.upper()}USD/?exchange=CRYPTO"
             buttons.append([InlineKeyboardButton(crypto_name, url=crypto_link)])
 
         reply_markup = InlineKeyboardMarkup(buttons)
-
+        if len(text) < 10:
+            return
         with open("images/image.jpg", "rb") as banner:
             await context.bot.send_photo(chat_id, banner, caption=formatted_text, reply_markup=reply_markup, parse_mode="HTML")
 

@@ -14,8 +14,8 @@ def convert_time(time_str):
 
     base_time = arrow.get(f"{hour:02d}:{minute:02d}", "HH:mm").replace(tzinfo="UTC")
 
-    msk = base_time.to("Europe/Moscow").shift(minutes=30).format("HH:mm")  # Додаємо 30 хвилин для MSK
-    kiev = base_time.to("Europe/Kiev").shift(minutes=-2).format("HH:mm")  # Віднімаємо 2 хвилини для KIEV
+    msk = base_time.to("Europe/Moscow").shift(minutes=30).format("HH:mm")  # adding 30 minutes for MSK
+    kiev = base_time.to("Europe/Kiev").shift(minutes=-2).format("HH:mm")  # minus 2 minutes for Kiev
     cet = base_time.to("CET").format("HH:mm")
     utc_str = base_time.format("HH:mm")
     

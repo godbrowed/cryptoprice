@@ -11,7 +11,7 @@ def get_price(crypto):
     return response.json().get("USD", 0)
 
 def extract_crypto(text):
-    return re.findall(r"(\d+(\.\d+)?)\s+([a-zA-Z]+)", text)
+    return re.findall(r"(\d+(\.\d+)?)\s+([a-zA-Z]+)", text) #finds all the crypto amounts in the text
 
 async def multiply_crypto(update: Update, context):
     text = update.message.text.strip()
@@ -43,10 +43,13 @@ async def multiply_crypto(update: Update, context):
             if total_amount != 1:
                 formatted_text += f"<code>Amount: {total_amount}</code>\n"
             formatted_text += f"<code>Price: ${total_price:.2f} USD</code>\n\n"
-            crypto_link = f"https://www.tradingview.com/symbols/{crypto.upper()}USD/?exchange=CRYPTO"
+            crypto_link = f"https://www.tradingview.com/symbols/{crypto.upper()}USD/?exchange=CRYPTO" #link to the crypto
             buttons.append([InlineKeyboardButton(crypto_name, url=crypto_link)])
         reply_markup = InlineKeyboardMarkup(buttons)
+
         with open("images/image.jpg", "rb") as banner:
             await context.bot.send_photo(chat_id, banner, caption=formatted_text, reply_markup=reply_markup, parse_mode="HTML")
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {e}", parse_mode="HTML")
+
+

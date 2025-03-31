@@ -1,10 +1,10 @@
-# main.py
-from telegram.ext import Application, MessageHandler, filters
+from telegram.ext import Application, MessageHandler, CommandHandler, filters
 from bot.config import TOKEN
 from bot.eval import handle_eval_request
 from bot.cryptoeval import cryptoeval
 from bot.multiplycrypto import multiply_crypto
 from bot.time import handle_time_request
+from bot.chatassist import add_chatassist_handlers
 import re
 
 def is_time_request(text: str):
@@ -21,6 +21,7 @@ def is_single_crypto_price_request(text: str):
 
 def main():
     application = Application.builder().token(TOKEN).build()
+    
     application.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND,
         lambda update, context: (
@@ -31,6 +32,9 @@ def main():
             else handle_eval_request(update, context)
         )
     ))
+    
+    add_chatassist_handlers(application)
+    
     application.run_polling()
 
 if __name__ == "__main__":
